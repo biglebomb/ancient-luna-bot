@@ -1,14 +1,13 @@
-const { MessageEmbed, Client } = require("discord.js");
-const { MessageButton } = require("discord-buttons");
+const { MessageEmbed, MessageActionRow, MessageButton } = require("discord.js");
 const jsdom = require("jsdom");
 
 module.exports.run = async (client, message, args) => {
     const survivorID = args.join(" ");
-    if (!survivorID) return message.channel.send("Please specify an ID");
+    if (!survivorID) return message.channel.send("Please specify an ID").catch((e) => {});
 
-    var request = require('request')
+    let request = require('request')
 
-    var option = {
+    let option = {
         url: `https://www.dfprofiler.com/profile/json/${survivorID}`,
         headers: {
             "X-Requested-With": "XMLHttpRequest"
@@ -16,50 +15,52 @@ module.exports.run = async (client, message, args) => {
     }
 
     request(option, function (err, responce, body) {
-        var stat = JSON.parse(body)
+        let stat = JSON.parse(body);
 
         const domUsername = new jsdom.JSDOM(stat['username']);
-        var username = domUsername.window.document.querySelector("a").textContent;
+        let username = domUsername.window.document.querySelector("a").textContent;
 
-        var gold_member = stat['gold_member']
+        let exp_since_death = stat['exp_since_death']
+        let weekly_ts = stat['weekly_ts']
+        let all_time_ts = stat['all_time_ts']
 
-        var weekly_ts = stat['weekly_ts']
-        var exp_since_death = stat['exp_since_death']
-
-        var daily_tpk = stat['daily_tpk']
-        var weekly_tpk = stat['weekly_tpk']
-        var pvp_last_hit = stat['pvp_last_hit']
+        let daily_tpk = stat['daily_tpk']
+        let weekly_tpk = stat['weekly_tpk']
+        let all_time_tpk = stat['all_time_tpk']
 
         const embedRecord = new MessageEmbed()
-            .setTitle(`${username}'s Weekly Record`)
+            .setTitle(`${username}'s Record`)
             .setURL(`https://www.dfprofiler.com/profile/view/${survivorID}`)
-            .addField(`**EXP Since Death**`, `${exp_since_death} EXP`, true)
-            .addField(`**Weekly TS**`, `${weekly_ts} EXP`, true)
-            .addField(`**Gold Member**`, gold_member, true)
-            .addField(`**Daily TPK**`, daily_tpk, true)
-            .addField(`**Weekly TPK**`, weekly_tpk, true)
-            .addField(`**Last Hit By**`, pvp_last_hit, true)
+            .addFields(
+                { name: `**EXP Since Death**`, value: `${exp_since_death} EXP`, inline: true },
+                { name: `**Weekly TS**`, value: `${weekly_ts} EXP`, inline: true },
+                { name: `**⭐ All Time TS**`, value: `${all_time_ts} EXP`, inline: true },
+                { name: `**Daily TPK**`, value: daily_tpk, inline: true },
+                { name: `**Weekly TPK**`, value: weekly_tpk, inline: true },
+                { name: `**⭐ All Time TPK**`, value: all_time_tpk, inline: true }
+            )
             .setImage(`https://www.dfprofiler.com/signaturereplicate.php?profile=${survivorID}&imgur=5q7hV6B`)
+            .setFooter({ text: `Powered by Ancient Luna`, iconURL: 'https://i.imgur.com/vKo3PJm.png' })
+            .setTimestamp()
 
-        const buttonProfile = new MessageButton()
-            .setStyle("url")
-            .setLabel("Dead Frontier Profile ⁣")
-            .setURL(`https://fairview.deadfrontier.com/onlinezombiemmo/index.php?action=profile;u=${survivorID}`)
+        const btnProfile = new MessageActionRow()
+            .addComponents(
+                new MessageButton()
+                    .setStyle("LINK")
+                    .setLabel(`See Profile Detail in DF Profiler`)
+                    .setURL(`https://www.dfprofiler.com/profile/view/${survivorID}`)
+            )
+            .addComponents(
+                new MessageButton()
+                    .setStyle("LINK")
+                    .setLabel(`Updated Profile Image`)
+                    .setURL(`https://www.dfprofiler.com/signaturereplicate.php?profile=${survivorID}&imgur=5q7hV6B.png`)
+            )
 
-        const buttonMessage = new MessageButton()
-            .setStyle("url")
-            .setLabel("Send Message")
-            .setURL(`https://fairview.deadfrontier.com/onlinezombiemmo/index.php?action=pm;sa=send;u=${survivorID}`)
-
-        const buttonTrade = new MessageButton()
-            .setStyle("url")
-            .setLabel("Trade ⁣")
-            .setURL(`https://fairview.deadfrontier.com/onlinezombiemmo/index.php?page=27&memto=${survivorID}`)
-
-        message.channel.send({
-            buttons: [buttonProfile, buttonMessage, buttonTrade],
-            embed: embedRecord
-        })
+        message.reply({
+            embeds: [embedRecord],
+            components: [btnProfile],
+        }).catch((e) => {});
     })
 }
 
